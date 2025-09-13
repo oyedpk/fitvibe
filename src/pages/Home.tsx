@@ -129,7 +129,7 @@ export function Home({ profile }: Props) {
         <ul className="list-disc list-inside text-sm space-y-1">
           <li>Log a single daily total for calories and macros.</li>
           <li>Choose your split (PPL or Upper/Lower) before adding sets.</li>
-          <li>Consistency > perfection. Tiny daily wins compound.</li>
+          <li>Consistency &gt; perfection. Tiny daily wins compound.</li>
         </ul>
       </Card>
 

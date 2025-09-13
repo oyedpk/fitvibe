@@ -1,4 +1,4 @@
-import { supabase } from "../supabaseClient";
+import { supabase } from "../../supabaseClient";
 import type {
   Activity, Goal, Profile, NutritionDaily, Workout, BodyWeight, Split, SplitDay, WorkoutSet
 } from "../types";

@@ -1,10 +1,19 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 import { SignInForm } from "./SignInForm";
 import { SignUpForm } from "./SignUpForm";
 
 export function AuthGate() {
   const [tab, setTab] = useState<"signin" | "signup">("signin");
+  const { user, loading } = useAuth();
+
+  // If already signed in (e.g., after magic link), go home
+  if (!loading && user) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 grid place-items-center px-4">
       <motion.div

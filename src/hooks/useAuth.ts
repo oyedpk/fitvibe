@@ -3,14 +3,29 @@ import { supabase } from "../supabaseClient";
 
 export function useAuth() {
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user || null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setUser(session?.user || null);
+    let mounted = true;
+
+    // Get existing session on first load (handles magic-link redirect)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      setUser(session?.user ?? null);
+      setLoading(false);
     });
-    return () => sub.subscription.unsubscribe();
+
+    // Listen for future auth changes
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
-  return { user };
+  return { user, loading };
 }

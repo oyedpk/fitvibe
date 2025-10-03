@@ -9,6 +9,7 @@ import { Home } from "./pages/Home";
 import { Calories } from "./pages/Calories";
 import { Workouts } from "./pages/Workouts";
 import { Progress } from "./pages/Progress";
+import { Analytics } from "./pages/Analytics";
 import { Profile } from "./types";
 
 function HomeWithCtx() {
@@ -23,6 +24,7 @@ function ProgressWithCtx() {
   const { profile } = useOutletContext<{ profile: Profile | null }>();
   return <Progress profile={profile} />;
 }
+
 
 createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
@@ -58,6 +60,14 @@ createRoot(document.getElementById("root")!).render(
           element={
             <RequireAuth>
               <ProgressWithCtx />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="analytics"
+          element={
+            <RequireAuth>
+              <Analytics />
             </RequireAuth>
           }
         />

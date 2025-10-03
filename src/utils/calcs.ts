@@ -31,7 +31,13 @@ export function calorieTarget(p: Partial<Profile>, sex: "male" | "female" = "mal
 }
 
 export function proteinTarget(p: Partial<Profile>) {
-  const perKg = Number(p.protein_per_kg || 2);
+  const perKgRaw = p.protein_per_kg;
+  const perKg = perKgRaw == null || perKgRaw === ""
+    ? 2
+    : Number(perKgRaw);
   const w = Number(p.weight_kg || 0);
+  if (!Number.isFinite(perKg) || perKg < 0) {
+    return 0;
+  }
   return Math.round(perKg * w);
 }

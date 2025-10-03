@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -12,8 +12,15 @@ import {
   Legend,
 } from "recharts";
 import { Card } from "../components/ui/Card";
+import { NumberInput } from "../components/ui/Number";
 import { useAuth } from "../hooks/useAuth";
-import { listBodyWeight, listNutritionRecent, listWorkoutsRecent } from "../services/db";
+import {
+  addBodyWeight,
+  listBodyWeight,
+  listNutritionRecent,
+  listWorkoutsRecent,
+  upsertNutrition,
+} from "../services/db";
 import { BodyWeight, NutritionDaily, Workout } from "../types";
 
 function formatDay(iso: string) {
@@ -60,6 +67,15 @@ export function Analytics() {
   const [weights, setWeights] = useState<BodyWeight[]>([]);
   const [nutrition, setNutrition] = useState<NutritionDaily[]>([]);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [weightInput, setWeightInput] = useState<number>(0);
+  const [caloriesInput, setCaloriesInput] = useState<number>(0);
+  const [proteinInput, setProteinInput] = useState<number>(0);
+  const [carbsInput, setCarbsInput] = useState<number>(0);
+  const [fatsInput, setFatsInput] = useState<number>(0);
+  const [savingWeight, setSavingWeight] = useState(false);
+  const [savingNutrition, setSavingNutrition] = useState(false);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -67,6 +83,70 @@ export function Analytics() {
     listNutritionRecent(user.id, 60).then(setNutrition);
     listWorkoutsRecent(user.id, 60).then(setWorkouts);
   }, [user]);
+
+  const refreshData = useCallback(async () => {
+    if (!user) return;
+    const [w, n, wrk] = await Promise.all([
+      listBodyWeight(user.id, 180),
+      listNutritionRecent(user.id, 60),
+      listWorkoutsRecent(user.id, 60),
+    ]);
+    setWeights(w);
+    setNutrition(n);
+    setWorkouts(wrk);
+  }, [user]);
+
+  useEffect(() => {
+    const weightForDate = weights.find((w) => w.date === selectedDate);
+    setWeightInput(weightForDate ? Number(weightForDate.kg) : 0);
+
+    const nutritionForDate = nutrition.find((n) => n.date === selectedDate);
+    setCaloriesInput(nutritionForDate ? Number(nutritionForDate.calories || 0) : 0);
+    setProteinInput(
+      nutritionForDate && nutritionForDate.protein != null ? Number(nutritionForDate.protein) : 0
+    );
+    setCarbsInput(
+      nutritionForDate && nutritionForDate.carbs != null ? Number(nutritionForDate.carbs) : 0
+    );
+    setFatsInput(
+      nutritionForDate && nutritionForDate.fats != null ? Number(nutritionForDate.fats) : 0
+    );
+  }, [weights, nutrition, selectedDate]);
+
+  useEffect(() => {
+    if (!saveNotice) return;
+    const id = window.setTimeout(() => setSaveNotice(null), 3000);
+    return () => window.clearTimeout(id);
+  }, [saveNotice]);
+
+  async function handleSaveWeight() {
+    if (!user) return;
+    setSavingWeight(true);
+    try {
+      await addBodyWeight(user.id, selectedDate, Number(weightInput || 0));
+      await refreshData();
+      setSaveNotice("Weight updated");
+    } finally {
+      setSavingWeight(false);
+    }
+  }
+
+  async function handleSaveNutrition() {
+    if (!user) return;
+    setSavingNutrition(true);
+    try {
+      await upsertNutrition(user.id, selectedDate, {
+        calories: Number(caloriesInput || 0),
+        protein: Number(proteinInput || 0),
+        carbs: Number(carbsInput || 0),
+        fats: Number(fatsInput || 0),
+      });
+      await refreshData();
+      setSaveNotice("Nutrition updated");
+    } finally {
+      setSavingNutrition(false);
+    }
+  }
 
   const combinedRows = useMemo(() => {
     const map = new Map<string, CombinedRow>();
@@ -160,6 +240,52 @@ export function Analytics() {
 
   return (
     <div className="space-y-6">
+      <Card title="Log or update a day">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
+            <label className="text-sm">
+              <div className="text-xs text-gray-600 mb-1">Date</div>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="rounded-xl border px-3 py-2 shadow-sm"
+              />
+            </label>
+            {saveNotice ? (
+              <div className="text-xs text-green-600">{saveNotice}</div>
+            ) : null}
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <NumberInput label="Weight (kg)" value={weightInput} onChange={setWeightInput} step={0.1} />
+              <button
+                className="rounded-xl bg-black text-white px-4 py-2 text-sm"
+                onClick={handleSaveWeight}
+                disabled={savingWeight}
+              >
+                {savingWeight ? "Saving..." : "Save weight"}
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <NumberInput label="Calories" value={caloriesInput} onChange={setCaloriesInput} />
+                <NumberInput label="Protein (g)" value={proteinInput} onChange={setProteinInput} />
+                <NumberInput label="Carbs (g)" value={carbsInput} onChange={setCarbsInput} />
+                <NumberInput label="Fat (g)" value={fatsInput} onChange={setFatsInput} />
+              </div>
+              <button
+                className="rounded-xl bg-black text-white px-4 py-2 text-sm"
+                onClick={handleSaveNutrition}
+                disabled={savingNutrition}
+              >
+                {savingNutrition ? "Saving..." : "Save nutrition"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <Card title="Daily log snapshot" className="overflow-x-auto">
         <div className="min-w-full">
           <table className="w-full text-sm">

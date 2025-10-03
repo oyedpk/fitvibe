@@ -27,6 +27,7 @@ export default function App() {
           <NavBtn to="/calories" label="Track Calories" />
           <NavBtn to="/workouts" label="Track Workouts" />
           <NavBtn to="/progress" label="Progress" />
+          <NavBtn to="/analytics" label="Analytics" />
           {user && (
             <button className="rounded-xl bg-gray-200 px-3 py-2 text-sm" onClick={() => supabase.auth.signOut()}>
               Sign out
